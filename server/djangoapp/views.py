@@ -3,7 +3,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 # from .models import related models
-# from .restapis import related methods
+from .restapis import get_dealers_by_id, get_dealers_by_state, get_dealers_from_cf, get_dealer_reviews_from_cf, post_request
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from datetime import datetime
@@ -89,13 +89,50 @@ def registration_request(request):
 def get_dealerships(request):
     context = {}
     if request.method == "GET":
-        return render(request, 'djangoapp/index.html', context)
+        URL = 'https://us-south.functions.appdomain.cloud/api/v1/web/751c0cc7-acd5-4f8c-b8a8-0c4b0c8d7662/api/dealership.json'
+        # Get dealers from the cloudant URL through defined function in restapi
+        dealership = get_dealers_from_cf(URL, dealerId=1)
+        # Concat all dealers short names
+        dealer_names = ' '.join([dealer.short_name for dealer in dealership])
+        # Return a list fo dealers short name
+        return HttpResponse(dealer_names)
 
 
 # Create a `get_dealer_details` view to render the reviews of a dealer
-# def get_dealer_details(request, dealer_id):
-# ...
+def get_dealer_details(request, dealer_id):
+    # print(dealer_id)
+    URL = 'https://us-south.functions.appdomain.cloud/api/v1/web/751c0cc7-acd5-4f8c-b8a8-0c4b0c8d7662/api/get-review.json'
+    # Get reviews from the cloudant URL through defined function in restapi
+    reviews_details = get_dealer_reviews_from_cf(URL, dealerId=dealer_id)
+    # Concat all reviews of a dealer
+    if reviews_details != '':
+        reveiws = ' '.join(
+            [review.review + ' ' + review.sentiment for review in reviews_details])
+    else:
+        reveiws = 'Incorrect Dealer Id'
+    # Return a list fo dealers short name
+    return HttpResponse(reveiws)
 
 # Create a `add_review` view to submit a review
-# def add_review(request, dealer_id):
-# ...
+
+
+def add_review(request, dealer_id):
+    # construcr a dictionary object to hold append keys
+    review = {
+        'time': datetime.utcnow().isoformat(),
+        'dealership': dealer_id,
+        'review': 'review'
+    }
+    json_payload = {
+        'review': review
+    }
+    # URL of python Action in IBM Functions
+    URL = 'https://us-south.functions.appdomain.cloud/api/v1/web/751c0cc7-acd5-4f8c-b8a8-0c4b0c8d7662/api/post-review'
+
+    if request.user.is_authenticated:
+        posted_response = post_request(
+            URL, json_payload, dealerId=dealer_id)
+    else:
+        posted_response = 'Please Login to post'
+
+    return HttpResponse(posted_response)
