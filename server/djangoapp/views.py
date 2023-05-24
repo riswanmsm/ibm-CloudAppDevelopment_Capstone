@@ -23,8 +23,9 @@ def about(request):
     if request.method == "GET":
         return render(request, 'djangoapp/about.html', context)
 
-
 # Create a `contact` view to return a static contact page
+
+
 def contact(request):
     context = {}
     if request.method == "GET":
@@ -93,9 +94,11 @@ def get_dealerships(request):
         # Get dealers from the cloudant URL through defined function in restapi
         dealership = get_dealers_from_cf(URL, dealerId=1)
         # Concat all dealers short names
-        dealer_names = ' '.join([dealer.short_name for dealer in dealership])
+        context['dealership_list'] = dealership
+        # dealer_names = ' '.join([dealer.short_name for dealer in dealership])
         # Return a list fo dealers short name
-        return HttpResponse(dealer_names)
+        # return HttpResponse(dealer_names)
+        return render(request, 'djangoapp/index.html', context)
 
 
 # Create a `get_dealer_details` view to render the reviews of a dealer
