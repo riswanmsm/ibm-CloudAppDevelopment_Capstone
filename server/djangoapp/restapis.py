@@ -6,6 +6,7 @@ from requests.auth import HTTPBasicAuth
 from ibm_watson.natural_language_understanding_v1 import Features, SentimentOptions
 from ibm_watson import NaturalLanguageUnderstandingV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
+from datetime import datetime
 
 
 def get_request(url, **kwargs):
@@ -32,7 +33,6 @@ def post_request(url, json_payload, **kwargs):
     # try:
     response = requests.post(
         url, params=kwargs, json=json_payload)
-    print('ddd')
     return response
     # except:
     #     print('there is an error while posting review')
@@ -60,24 +60,21 @@ def get_dealers_from_cf(url, **kwargs):
 
 
 def get_dealers_by_id(url, **kwargs):
-    results = []
+
     # Call get_request with a URL parameter
     print('get_dealers_by_id ======')
     json_result = get_request(url, **kwargs)
     if json_result:
         # Get the row list in JSON as dealers
-        dealers = json_result["result"]
+        dealer = json_result["result"][0]
         # For each dealer object
-        for dealer in dealers:
-            # Get its content in `doc` object
-            dealer_doc = dealer
-            # Create a CarDealer object with values in `doc` object
-            dealer_obj = CarDealer(address=dealer_doc["address"], city=dealer_doc["city"], full_name=dealer_doc["full_name"],
-                                   id=dealer_doc["id"], lat=dealer_doc["lat"], long=dealer_doc["long"],
-                                   short_name=dealer_doc["short_name"],
-                                   st=dealer_doc["st"], zip=dealer_doc["zip"])
-            results.append(dealer_obj)
-    return results
+        # print(dealer)
+        dealer_obj = CarDealer(address=dealer["address"], city=dealer["city"], full_name=dealer["full_name"],
+                               id=dealer["id"], lat=dealer["lat"], long=dealer["long"],
+                               short_name=dealer["short_name"],
+                               st=dealer["st"], zip=dealer["zip"])
+        print(dealer_obj)
+        return dealer_obj
 
 
 def get_dealers_by_state(url, **kwargs):
@@ -107,11 +104,13 @@ def get_dealer_reviews_from_cf(url, **kwargs):
     results = []
     # Call get_request with a URL parameter
     json_result = get_request(url, **kwargs)
+
     # print(json_result)
     if 'body' in json_result.keys():
         # Get the row list in JSON as reviews
         # print(json_result)
         reviews = json_result["body"]["data"]
+        print(reviews[0]["dealership"])
         # For each dealer object
         for review in reviews:
             # Get its content in `doc` object
@@ -119,9 +118,10 @@ def get_dealer_reviews_from_cf(url, **kwargs):
             # Create a CarDealer object with values in `doc` object
             dealer_review_obj = DealerReview(dealership=review["dealership"], name=review["name"],
                                              purchase=review["purchase"], review=review["review"],
-                                             purchase_date=review["purchase_date"],
-                                             car_make=review["car_make"], car_model=review["car_model"],
-                                             car_year=review["car_year"], sentiment='', id=review["id"])
+                                             purchase_date=review["purchase_date"] if "purchase_date" in review else datetime.utcnow(
+            ).isoformat(),
+                car_make=review["car_make"], car_model=review["car_model"],
+                car_year=review["car_year"], sentiment='', id=review["id"])
             # appending the response from IBM NLU to the sentiment property of dealer object
             dealer_review_obj.sentiment = analyze_review_sentiments(
                 dealer_review_obj.review)
@@ -137,6 +137,7 @@ def get_dealer_reviews_from_cf(url, **kwargs):
 def analyze_review_sentiments(review_text):
     NLU_API_KEY = 'oL91GSc8-OOA6APvU0QvjSaWmF4RKoHW3psVlSzEmEkv'
     URL = 'https://api.au-syd.natural-language-understanding.watson.cloud.ibm.com/instances/1cd71557-8376-4aa7-93fa-4654ed312b81'
+    sentiment_label = 'neutral'
 
     version = '2021-08-01'
     authenticator = IAMAuthenticator(NLU_API_KEY)
@@ -156,13 +157,6 @@ def analyze_review_sentiments(review_text):
         sentiment_label = "neutral"
 
     # print(sentiment_score)
-    print(sentiment_label)
+    # print(sentiment_label)
 
     return sentiment_label
-
-    # analyzed_review = get_request(
-    #     URL, nlu_api_key=NLU_API_KEY, text=review, version='2021-08-01', features=Features(
-    #         sentiment=SentimentOptions()))
-
-    # requests.get(url=URL, nlu_api_key=NLU_API_KEY, headers={
-    #              'Content-Type': 'application/json'}, auth=HTTPBasicAuth('apikey', NLU_API_KEY))

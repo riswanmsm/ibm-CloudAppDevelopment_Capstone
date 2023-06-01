@@ -42,6 +42,9 @@ class CarModel(models.Model):
     def __str__(self):
         return self.name
 
+    def get_year(self):
+        return self.year.year
+
 
 # <HINT> Create a plain Python class `CarDealer` to hold dealer data
 class CarDealer:
@@ -67,7 +70,7 @@ class CarDealer:
         self.zip = zip
 
     def __str__(self):
-        return "Dealer name: " + self.full_name
+        return self.full_name
 
 
 # <HINT> Create a plain Python class `DealerReview` to hold review data
